@@ -1,0 +1,7 @@
+---
+- name: Converge
+  hosts: all
+  tasks:
+    - name: "Include dp--infra-role-opensearch"
+      include_role:
+        name: "dp--infra-role-opensearch"

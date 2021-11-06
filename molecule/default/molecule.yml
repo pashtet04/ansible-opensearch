@@ -1,0 +1,64 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: "vagrant"
+  provider: 
+    name: libvirt
+platforms:
+- name: vmcentos8-master
+  box: generic/centos8
+  memory: 1024
+  cpus: 1
+  groups:
+    - opensearch
+    - master
+  interfaces: 
+    - network_name: forwarded_port
+      guest: 9200
+      host: 9201
+    - network_name: private_network
+      type: dhcp
+      auto_config: true
+  options:
+    append_platform_to_hostname: no
+- name: vmcentos8-coordinator
+  box: generic/centos8
+  memory: 1024
+  cpus: 1
+  groups:
+    - opensearch
+    - coordinator
+  interfaces: 
+    - network_name: forwarded_port
+      guest: 9200
+      host: 9202
+    - network_name: private_network
+      type: dhcp
+      auto_config: true
+  options:
+    append_platform_to_hostname: no
+- name: vmcentos8-data
+  box: generic/centos8
+  memory: 1024
+  cpus: 1
+  groups:
+    - opensearch
+    - data
+  interfaces: 
+    - network_name: forwarded_port
+      guest: 9200
+      host: 9203
+    - network_name: private_network
+      type: dhcp
+      auto_config: true
+  options:
+    append_platform_to_hostname: no
+provisioner:
+  name: ansible
+  connection_options:
+    ansible_ssh_user: 'vagrant'
+verifier:
+  name: ansible
+scenario:
+  name: default

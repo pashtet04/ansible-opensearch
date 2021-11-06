@@ -1,0 +1,69 @@
+---
+- name: Make sure Opensearch is running before proceeding.
+  wait_for:
+    host: "{{ ansible_default_ipv4.address }}"
+    port: "{{ opensearch_http_port }}"
+    delay: 3
+    timeout: 300
+
+- name: Get ILM Policies
+  run_once: true
+  become: no
+  delegate_to: localhost
+  uri:
+    url: "https://{{ ansible_fqdn }}:{{ opensearch_http_port }}/_plugins/_ism/policies/{{ item | basename | splitext | first }}"
+    url_username: admin
+    url_password: admin
+    method: GET
+    force_basic_auth: true
+    validate_certs: false
+    status_code: [ 200, 404 ]
+  retries: 3
+  delay: 5
+  until: ilm.status == 200 or ilm.status == 404
+  with_fileglob:
+    - "ilm/*"
+  register: ilm
+
+- name: Create ILM policies
+  run_once: true
+  become: no
+  delegate_to: localhost
+  uri:
+    url: "{{ item.url }}"
+    url_username: admin
+    url_password: admin
+    method: PUT
+    force_basic_auth: true
+    body_format: json
+    body: "{{ lookup('file',item.item) }}"
+    validate_certs: false
+    status_code: [ 201 ]
+  retries: 3
+  delay: 5
+  until: _result.status == 201
+  with_items: "{{ ilm.results }}"
+  when: '404 == item.status'
+  register: _result
+
+
+- name: Update ILM policies
+  run_once: true
+  become: no
+  delegate_to: localhost
+  uri:
+    url: "{{ item.url }}?if_seq_no={{ item.json._seq_no }}&if_primary_term={{ item.json._primary_term }}"
+    url_username: admin
+    url_password: admin
+    method: PUT
+    force_basic_auth: true
+    body_format: json
+    body: "{{ lookup('file',item.item) }}"
+    validate_certs: false
+    status_code: [ 200 ]
+  retries: 3
+  delay: 5
+  until: _result.status == 200
+  with_items: "{{ ilm.results }}"
+  when: '200 == item.status'
+  register: _result

@@ -1,0 +1,18 @@
+{{ ansible_managed | comment }}
+
+[Unit]
+Description=opensearch
+After=network-online.target
+
+[Service]
+Type=simple
+User={{ opensearch_system_user }}
+Group={{ opensearch_system_group }}
+ExecStart={{ opensearch_path }}/bin/opensearch
+SyslogIdentifier=opensearch
+Restart=always
+LimitNOFILE=65536
+LimitMEMLOCK=infinity
+
+[Install]
+WantedBy=multi-user.target

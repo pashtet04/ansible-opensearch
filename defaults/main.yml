@@ -1,0 +1,48 @@
+---
+opensearch_version: "1.0.1"
+
+# opensearch.yml
+opensearch_action_auto_create_index: true
+opensearch_bootstrap_memory_lock: true
+opensearch_cluster_name: opensearch-cluster
+opensearch_http_port: 9200
+opensearch_transport_port: 9300
+opensearch_compatibility_override_main_response_version: true
+
+opensearch_path_data: /data/
+opensearch_path_logs: /var/log/opensearch
+
+## TODO
+# perfomance analyzer
+#opensearch_perfomance_analyzer_enabled: false
+#opensearch_perfomance_analyzer_bind_host: 0.0.0.0
+
+opensearch_kernel_parameters:
+  - name: vm.max_map_count
+    value: 262144
+
+# Java
+opensearch_java_xms: 512m
+opensearch_java_xmx: 512m
+
+# Security
+opensearch_security_disabled: true
+opensearch_security_ssl_keystore_path: /etc/opensearch/{{ ansible_hostname}}_keystore.jks"
+opensearch_security_ssl_keystore_password: P@ssw0rd!
+opensearch_security_ssl_truststore_path: "/etc/opensearch/{{ ansible_hostname}}_truststore.jks"
+opensearch_security_ssl_truststore_password: P@ssw0rd!
+opensearch_security_ssl_hostname_verification: false
+
+# List of CN from master host's certificate SubjectName
+opensearch_security_ssl_nodes_dn_dynamic_config_enabled: true
+opensearch_security_ssl_nodes_dn: [] 
+
+# List of CN from client's certificate
+opensearch_security_ssl_admin_dn: []
+
+opensearch_security_ldap_groups_all_access: ad-opensearch-admins
+opensearch_security_ldap_groups_logstash: ad-opensearch-users
+opensearch_security_ldap_groups_kibana: ad-kibana
+opensearch_security_ldap_groups_readall: ad-kibana
+
+# Cluster

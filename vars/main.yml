@@ -1,0 +1,19 @@
+---
+go_arch_map:
+  i386: '386'
+  x86_64: 'amd64'
+  aarch64: 'arm64'
+  armv7l: 'armv7'
+  armv6l: 'armv6'
+
+go_arch: "{{ go_arch_map[ansible_architecture] | default(ansible_architecture) }}"
+
+opensearch_system_user: "opensearch"
+opensearch_system_group: "opensearch"
+opensearch_download_path: /opt
+opensearch_path: /opt/opensearch
+opensearch_config_path: "{{ opensearch_path }}/config"
+opensearch_bin_path: "{{ opensearch_path }}/bin"
+
+opensearch_pgp_key: https://artifacts.opensearch.org/publickeys/opensearch.pgp
+opensearch_pgp_fingerprint: C5B7498965EFD1C2924BA9D539D319879310D3FC

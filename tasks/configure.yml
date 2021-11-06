@@ -1,0 +1,72 @@
+---
+- name: Copy the opensearch systemd service file
+  template:
+    src: opensearch.service.j2
+    dest: /etc/systemd/system/opensearch.service
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart opensearch
+
+- name: Copy the jvm options file
+  template:
+    src: jvm.options.j2
+    dest: "{{ opensearch_config_path }}/jvm.options"
+    owner: "{{ opensearch_system_user }}"
+    group: "{{ opensearch_system_group }}"
+    mode: 0644
+  notify: restart opensearch
+
+- name: Copy the opensearch yml conf file
+  template:
+    src: opensearch.yml.j2
+    dest: "{{ opensearch_config_path }}/opensearch.yml"
+    owner: "{{ opensearch_system_user }}"
+    group: "{{ opensearch_system_group }}"
+    mode: 0644
+  notify: restart opensearch
+
+- name: Copy the security config yml file
+  template:
+    src: plugins/security.yml.j2
+    dest: "{{ opensearch_path }}/plugins/opensearch-security/securityconfig/config.yml"
+    owner: "{{ opensearch_system_user }}"
+    group: "{{ opensearch_system_group }}"
+    mode: 0644
+  notify: restart opensearch
+
+- name: Copy the roles mapping yml file
+  template:
+    src: plugins/roles_mapping.yml.j2
+    dest: "{{ opensearch_path }}/plugins/opensearch-security/securityconfig/roles_mapping.yml"
+    owner: "{{ opensearch_system_user }}"
+    group: "{{ opensearch_system_group }}"
+    mode: 0644
+  notify: restart opensearch
+
+- name: Get info about systemd services
+  service_facts:
+
+- name: Open ports on firewalld
+  firewalld:
+    port: "{{ item }}/tcp"
+    permanent: yes
+    state: enabled
+    zone: public
+    immediate: yes
+  loop:
+    - "{{ opensearch_http_port }}"
+    - "{{ opensearch_transport_port }}"
+  when: '"firewalld" in services'
+
+- name: Set permissions and ownership for opensearch dirs
+  file:
+    name: "{{ item }}"
+    owner: "{{ opensearch_system_user }}"
+    group: "{{ opensearch_system_group }}"
+    mode: 0700
+    recurse: yes
+  loop:
+    - "{{ opensearch_config_path }}"
+    - "{{ opensearch_path_data }}"
+    - "{{ opensearch_path_logs }}"

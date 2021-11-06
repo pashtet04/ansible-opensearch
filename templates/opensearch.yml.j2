@@ -1,0 +1,63 @@
+cluster.name: {{ opensearch_cluster_name | default('opensearch-cluster', true) }}
+
+node.name: {{ ansible_hostname }}-{{group_names[0]}}
+
+{% if ansible_hostname in groups['master'] %}
+node.master: true
+node.data: false
+node.ingest: false
+cluster.initial_master_nodes: [{% for host in groups['master'] %}"{{hostvars[host].ansible_default_ipv4.address}}"{% if not loop.last %}, {% endif %}{% endfor %}]
+{% elif ansible_hostname in groups['data'] %}
+node.master: false
+node.data: true
+node.ingest: true
+{% elif ansible_hostname in groups['coordinator']%}
+node.master: false
+node.data: false
+node.ingest: false
+{% else %}
+node.master: true
+node.data: true
+node.ingest: true
+discovery.type: single-node
+{% endif %}
+
+path.data: {{ opensearch_path_data }}
+path.logs: {{ opensearch_path_logs }}
+
+discovery.seed_hosts: [{% for host in groups['master'] %}"{{hostvars[host].ansible_default_ipv4.address}}"{% if not loop.last %}, {% endif %}{% endfor %}]
+
+network.host: {{ ansible_default_ipv4.address | default('[_local_, _site_]', true) }}
+http.port: {{ opensearch_http_port | default('9200', true) }}
+
+bootstrap.memory_lock: {{ opensearch_bootstrap_memory_lock | default(true, true) }}
+action.auto_create_index: {{ opensearch_action_auto_create_index | default(true, true) }}
+compatibility.override_main_response_version: {{ opensearch_compatibility_override_main_response_version | default(true, true) }}
+
+{% if opensearch_security_disabled == false %}
+plugins.security.disabled: false
+plugins.security.ssl.transport.keystore_filepath: "{{ opensearch_security_ssl_keystore_path }}"
+plugins.security.ssl.transport.keystore_password: "{{ opensearch_security_ssl_keystore_password }}"
+plugins.security.ssl.transport.truststore_filepath: "{{ opensearch_security_ssl_truststore_path }}"
+plugins.security.ssl.transport.truststore_password: "{{ opensearch_security_ssl_truststore_password }}"
+plugins.security.ssl.http.enabled: true
+plugins.security.ssl.http.keystore_filepath: "{{ opensearch_security_ssl_keystore_path }}"
+plugins.security.ssl.http.keystore_password: "{{ opensearch_security_ssl_keystore_password }}"
+plugins.security.ssl.http.truststore_filepath: "{{ opensearch_security_ssl_truststore_path }}"
+plugins.security.ssl.http.truststore_password: "{{ opensearch_security_ssl_truststore_password }}"
+
+plugins.security.system_indices.enabled: true
+plugins.security.system_indices.indices: [".opendistro-alerting-config", ".opendistro-alerting-alert*", ".opendistro-anomaly-results*", ".opendistro-anomaly-detector*", ".opendistro-anomaly-checkpoints", ".opendistro-anomaly-detection-state", ".opendistro-reports-*", ".opendistro-notifications-*", ".opendistro-notebooks", ".opendistro-asynchronous-search-response*"]
+
+plugins.security.restapi.roles_enabled: ["all_access", "security_rest_api_access"]
+plugins.security.unsupported.restapi.allow_securityconfig_modification: true
+
+plugins.security.nodes_dn: {{ opensearch_security_ssl_nodes_dn }}
+
+plugins.security.nodes_dn_dynamic_config_enabled: false
+plugins.security.ssl.transport.enforce_hostname_verification: false
+
+plugins.security.authcz.admin_dn: {{ opensearch_security_ssl_admin_dn }}
+{% else %}
+plugins.security.disabled: {{ opensearch_security_disabled  | default(true, true) }}
+{% endif %}

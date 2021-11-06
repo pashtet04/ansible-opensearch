@@ -1,0 +1,132 @@
+---
+- name: Create the opensearch group
+  group:
+    name: "{{ opensearch_system_group }}"
+    state: present
+    system: true
+
+- name: Create the opensearch user
+  user:
+    name: "{{ opensearch_system_user }}"
+    groups: "{{ opensearch_system_group }}"
+    append: true
+    shell: /usr/sbin/nologin
+    system: true
+    createhome: false
+    home: /
+
+- name: Optimize Kernel Parameters
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    sysctl_set: yes
+    reload: yes
+  with_items: "{{ opensearch_kernel_parameters }}"
+
+- name: Set pam security limits
+  pam_limits:
+    domain: "{{ opensearch_system_user }}"
+    limit_type: '-'
+    limit_item: memlock
+    value: unlimited
+    comment: "unlimited memory lock for {{ opensearch_system_user }}"
+
+- name: Check opensearch is installed
+  stat:
+    path: "{{ opensearch_path }}"
+  register: os_path
+  failed_when: false
+
+- name: Check opensearch version
+  command: "{{ opensearch_bin_path }}/opensearch --version"
+  when: os_path.stat.exists and os_path.stat.isdir
+  register: os_version
+  changed_when: false
+  failed_when: false
+
+- name: Install Opensearch
+  block:
+
+    - name: Download PGP Key
+      uri:
+        url: "{{ opensearch_pgp_key }}"
+        status_code: [ 200, 304 ]
+        dest: /usr/share/gnupg/
+        remote_src: yes
+
+    - name: Adds PGP key
+      command: "gpg --import /usr/share/gnupg/opensearch.pgp"
+      register: pgp
+      changed_when: '"not changed" not in pgp.stderr'
+
+    - name: Download signature
+      uri:
+        url: "https://artifacts.opensearch.org/releases/bundle/opensearch/{{ opensearch_version }}/opensearch-{{ opensearch_version }}-linux-x64.tar.gz.sig"
+        status_code: [ 200, 304 ]
+        dest: /tmp
+        remote_src: yes
+
+    - name: Download tarball
+      uri:
+        url: "https://artifacts.opensearch.org/releases/bundle/opensearch/{{ opensearch_version }}/opensearch-{{ opensearch_version }}-linux-x64.tar.gz"
+        status_code: [ 200, 304 ]
+        dest: /tmp
+        remote_src: yes
+
+    - name: Verify tarball
+      command: "gpg --verify /tmp/opensearch-{{ opensearch_version }}-linux-x64.tar.gz.sig /tmp/opensearch-{{ opensearch_version }}-linux-x64.tar.gz"
+      register: verify
+      changed_when: false
+
+    - name: Unarchive tarball
+      unarchive:
+        src: "https://artifacts.opensearch.org/releases/bundle/opensearch/{{ opensearch_version }}/opensearch-{{ opensearch_version }}-linux-x64.tar.gz"
+        dest: "{{ opensearch_download_path }}"
+        remote_src: yes
+        mode: 0700
+        owner: "{{ opensearch_system_user }}"
+        group: "{{ opensearch_system_group }}"
+
+    - name: Create a symbolic link
+      ansible.builtin.file:
+        src: "{{ opensearch_path }}-{{ opensearch_version }}"
+        dest: "{{ opensearch_path }}"
+        owner: "{{ opensearch_system_user }}"
+        group: "{{ opensearch_system_group }}"
+        state: link
+        mode: 0700
+  when: not os_path.stat.exists or opensearch_version not in os_version
+
+## TODO
+#- name: Set up Perfomance Analyzer
+#  block:
+#
+#    - name: Copy the perfomance analyzer properties file
+#      template:
+#        src: plugins/performance-analyzer.properties.j2
+#        dest: "{{ opensearch_config_path }}/performance-analyzer.properties"
+#        owner: "{{ opensearch_system_user }}"
+#        group: "{{ opensearch_system_group }}"
+#        mode: 0644
+#      notify: restart opensearch
+#
+#    - name: Make the CLI executable
+#      file: 
+#        name: "{{ opensearch_bin_path }}/performance-analyzer-agent-cli"
+#        mode: 0755
+#        owner: "{{ opensearch_system_user }}"
+#        group: "{{ opensearch_system_group }}"
+#
+#    - name: Launch the agent CLI
+#      become: yes
+#      command: "{{ opensearch_bin_path }}/performance-analyzer-agent-cli"
+#      async: 60
+#      poll: 5
+#      vars:
+#        opensearch_home: "{{ opensearch_path }}"
+#
+#    - name: 
+#      command: "curl -XPOST localhost:9200/_plugins/_performanceanalyzer/cluster/config -H 'Content-Type: application/json' -d '{\"enabled\": true}'"
+#
+#  when: opensearch_perfomance_analyzer_enabled is true

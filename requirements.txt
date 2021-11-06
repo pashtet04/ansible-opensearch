@@ -1,0 +1,12 @@
+# https://github.com/ansible/ansible-lint/issues/509
+ansible-lint
+ansible>=2.5
+docker
+jmespath
+molecule-docker
+molecule-podman
+molecule>=3.3.0
+podman
+pytest~=5.0
+ruamel.yaml==0.15.100
+testinfra~=3.0

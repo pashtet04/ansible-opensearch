@@ -1,0 +1,8 @@
+---
+- name: Initialize security
+  when: opensearch_security_disabled is false
+  run_once: true
+  command: 
+    "{{ opensearch_path }}/plugins/opensearch-security/tools/securityadmin.sh -cd {{ opensearch_path }}/plugins/opensearch-security/securityconfig -nhnv -ts {{ ssl_jks_dir }}/admin_truststore.jks -tspass {{ vault_secrets.opensearch.jks_pass }} -ks {{ ssl_jks_dir }}/admin_keystore.jks -kspass {{ vault_secrets.opensearch.jks_pass }} -h {{ ansible_fqdn }} -p {{ opensearch_transport_port }} -cn {{ opensearch_cluster_name }}"
+  vars:
+    java_home: "{{ {{ opensearch_path }} }}/jdk"
